@@ -113,18 +113,98 @@ def test_hook_client_after_request_remote_error_stream();
   test_server_task.join()
   
 def test_hook_client_remote_error_inspect():
-
+  
+  class ClientHandleRemoteErrorMiddleware(object):
+    def __init__(self):
+      self.called = False
+    
+    def cleint_handle_remote_error(self, event):
+      self.called = True
+    
+  test_middleware = ClientHandleRemoteErrorMiddleware()
+  zero_ctx = zerorpc.Context()
+  zero_ctx.register_middleware(test_middleware)
+  endpoint = random_ipc_endpoint()
+  
+  test_server = zerorpc.Client(context=zero_ctx)
+  test_client.connect(endpoint)
+  
+  assert test_middleware.called == False
+  try:
+    test_client.crash("test")
+  except zerorpc.RemoteError as ex:
+    assert test_middleware.called == True
+    assert ex.name == "RuntimeError"
+    
+  test_server.stop()
+  test_server_task.join()
+  
 class ClientEvalRemoteErrorMiddleware(object):
+  def __init__(self):
+    self.called = False
+  
+  def client_handle_remote_error(self, event):
+    self.called = True
+    name, msg, tb = event.args
+    etype = eval(name)
+    e = etype(tb)
+    return b
 
 def test_hook_client_handle_remote_error_eval():
+  test_middleware = ClientEvalRemoteErrorMiddleware()
+  zero_ctx = zerorpc.Context()
+  zero_ctx.register_middleware(test_middleware)
+  endpoint = random_ipc_endpoint()
+  
+  test_server = zerorpc.Server(EndModule(), context=zero_ctx)
+  test_server.bind(endpoint)
+  test_server_task = gevent.spawn(test_server_ctx)
+  
+  test_client = zerorpc.Client(context=zero_ctx)
+  test_client.connect(endpoint)
+  
+  assert test_middleware.called == False
+  try:
+    test_client.crash("test")
+  except RuntimeError as ex:
+    assert test_middleware.called == True
+    assert "BrokenEchoModule" in ex.args[0]
+    
+  test_server.stop()
+  test_server_task.join()
 
 def test_hook_client_handle_remote_error_eval_stream():
+  test_middleware = ClientEvalRemoteErrorMiddleware()
+  zero_ctx = zerorpc.Context()
+  zero_ctx.register_middleware(test_middleware)
+  endpoint = random_ipc_endpoint()
+  
+  test_server = zerorpc.Server(EchoModule(), context=zero_ctx)
+  test_server.bind(endpoint)
+  test_server_task = gevent.spawn(test_server.run)
+  
+  test_client = zerorpc.Client(context=zero_ctx)
+  test_client_task = gevent.spawn(test_server.run)
+  
+  test_client = zerorpc.Client(context=zero_ctx)
+  test_client.connect(endpoint)
+  
+  assert test_middleware.called == False
+  try:
+    test_client.echoes_crash("test")
+  except RuntimeError as ex:
+    assert test_middleware.called == True
+    assert "BrokenEchoModule" in ex.args[0]
+    
+  test_server.stop()
+  test_server_task.join()
 
 def test_hook_client_after_request_custom_error():
   
   class ClientEvalInspectRemoteErrorMiddleware(object):
     def __init__(self):
-    
+      self.called = False
+      
     def client_handle_remote_error(self, event):
       name, msg, tb = event.args
       etype = eval(name)
@@ -142,8 +222,11 @@ def test_hook_client_after_request_custom_error():
   endpoint = random_ipc_endpoint()
   
   test_server = zerorpc.Server(EchoModule(), context=zero_ctx)
+  test_server.bind(endpoint)
+  test_server_task = gevent.spawan(test_server.run)
   
-
+  test_client = zerorpc.Client(context=zero_ctx)
+  test_client.connect(endpoint)
 
   assert test_middleware.Client(context=zero_ctx)
   try:
