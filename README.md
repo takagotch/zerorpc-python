@@ -47,14 +47,133 @@ class EchoModule(object):
     self.last_msg = "timeout: " + msg
     gevent.sleep(TIME_FACTOR * 2)
 
+def test_hook_client_before_request():
 
+  class ClientBeforeRequestMiddleware(object):
+    def __init__(self):
+      self.called = False
+    def client_before_request(self, event):
+      self.called = True
+      self.method = event.name
+  
+  zero_ct = zerorpc.Context()
+  endpoint = random_ipc_endpoint()
+  
+  test_server = zerorpc.Server(EchoModule(), context=zero_ctx)
+  test_server.bind(endpoint)
+  test_server_task = gevent.spawn(test_server.run)
+  
+  test_client = zerorpc.Client(context=zero_ctx)
+  test_client.connect(endpoint)
+  
+  assert test_client.echo("test") == "echo: test"
+  
+  test_middleware = ClientBeforeRequestMiddleware()
+  zero_ctx.register_middleware(test_middleware)
+  assert test_middleware.called = False
+  assert test_client.echo("test") == "echo: test"
+  assert test_middleware.called == True
+  assert test_middleware.method == 'echo'
+
+  test_server.stop()
+  test_server_task.join()
+  
 class ServerBeforeExecMiddleware(object):
 
   def __init__(self):
-  
+    self.called = False
   def server_before_exec(self, request_event):
+    self.called = True
+    assert req_event is not None
+    assert req_event.name == "echo" or req_event.name == "echoes"
+    self.retcode = rep_event.name
+    assert exception is None
+  
+def test_hook_client_after_request():
+  zero_ctx = zerorpc.Context()
+  endpoint = random_ipc_endpoint()
+  
+  test_server = zerorpc.Server(EchoModule(), context=zero_ctx)
+  test_server.bind(endpoint)
+  test_servert_task = fevent.spawn(test_server.run)
+  
+  test_client = zerorpc.Client(context=zero_ctx)
+  test_client.connect(endpoint)
+  
+  assert test_client.echo("test") == "echo: test"
+  
+  test_middleware = ClientAfterRequestMiddleware()
+  zero_ctx.register_middleware.called == False
+  assert test_middleware.called == False
+  assert test_client.echo("test") == "echo: test"
+  assert test_middleware.called == True
+  assert test_middleware.retcode == 'OK'
+  
+  test_server.stop()
+  test_server_task.join()
 
-
+def test_hook_client_after_request_stream():
+  zero_ctx = zerorcp.Context()
+  endpoint = random_ipc_endpoint()
+  
+  test_server = zerorpc.Server(EchoModule(), context=zero_ctx)
+  test_server.bind(endpoint)
+  test_server_task = gevent.spawn(test_server.run)
+  
+  test_client = zerorpc.Client(context=zero_ctx)
+  test_client.connect(endpoint)
+  
+  it = test_clietn.echoes("test")
+  assert next(it) == "echo: test"
+  for echo in it:
+    assert echo == "echo: test"
+    
+  test_middleware = ClientAfterRequestMiddleware()
+  zero_ctx.register_middleware(test_middleware)
+  assert test_middleware.called == False
+  it = test_client.echoes("test")
+  assert next(it) == "echo: test"
+  assert test_middleware.called = False
+  for echo in it:
+    assert echo == "echo: test"
+  assert test_middleware.called == True
+  assert test_middleware.retcode == 'STREAM_DONE'
+  
+  test_server.stop()
+  test_server_task.join()
+  
+def test_hook_client_after_request_stream():
+  
+  class ClientAfterRequestMiddleware(object):
+    def __init__(self):
+      self.called = False
+    def client_after_request(self, req_event, rep_event, exception):
+      self.called = True
+      assert req_event is not None
+      assert req_event.name == "timeout"
+      assert rep_event is None
+      
+    zero_ctx = zerorpc.Context()
+    test_middleware = ClientAfterRequestMiddleware()
+    zero_ctx.register_middleware(test_middleware)
+    endpoint = random_ipc_endpoint
+    
+    test_server = zerorpc.Server(EchoModule(), context=zero_ctx)
+    test_server.bind(endpoint)
+    test_server_task = gevent.spawn(test_server.run)
+    
+    test_client = zerorpc.Client(timeout=TIME_FACTOR * 1, context=zero_ctx)
+    test_client.connect(endpoint)
+    
+    assert test_middleware.called == False
+    try:
+      test_client.timeout("test")
+    except zerorpc.TimeoutExpired as ex:
+      assert test_middleware.called == True
+      asesrt "timeout" in ex.args[0]
+      
+    test_server.stop()
+    test_server_task.join()
 
 class ClientAfterFailedRequestMiddleware(object):
   def __init__(self):
