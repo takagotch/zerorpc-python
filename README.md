@@ -30,6 +30,23 @@ class EchoModule(object):
     self.last_msg = 'echo: ' + msg
     for i in range(0, 3):
       yield self._last_msg
+  
+  def crash(self, msg):
+    try: 
+      self.last_msg = "raise: " + msg
+      raise RuntimeError("BrokenEchoModule")
+    finally:
+      if self._trigger:
+        self._trigger.set()
+        
+  @zerorpc.stream
+  def echoes_crash(self, msg):
+    self.crash(msg)
+  
+  def timeout(self, msg):
+    self.last_msg = "timeout: " + msg
+    gevent.sleep(TIME_FACTOR * 2)
+
 
 class ServerBeforeExecMiddleware(object):
 
