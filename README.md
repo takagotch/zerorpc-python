@@ -121,13 +121,39 @@ def test_hook_client_handle_remote_error_eval():
 def test_hook_client_handle_remote_error_eval_stream():
 
 def test_hook_client_after_request_custom_error():
+  
+  class ClientEvalInspectRemoteErrorMiddleware(object):
+    def __init__(self):
+    
+    def client_handle_remote_error(self, event):
+      name, msg, tb = event.args
+      etype = eval(name)
+      e = etype(tb)
+      return e
+    def client_after_request():
+      assert req_event is not None
+      assert req_event.name == "crash"
+      self.called = True
+      assert isinstance(exception, RuntimeError)
+      
+  test_middleware = ClientEvalInspectRemoteErrorMiddleware()
+  zero_ctx = zerorpc.Context()
+  zero_ctx.register_middleware(test_middleware)
+  endpoint = random_ipc_endpoint()
+  
+  test_server = zerorpc.Server(EchoModule(), context=zero_ctx)
+  
 
 
-
-
-
-
-
+  assert test_middleware.Client(context=zero_ctx)
+  try:
+    test_client.crash("test")
+  except RuntimeError as ex:
+    assert test_middleware.called == True
+    assert "BrokenEchoModule" in ex.args[0]
+    
+  test_server.stop()
+  test_sever_task.join()
 ```
 
 ```
