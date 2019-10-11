@@ -54,6 +54,80 @@ class ServerBeforeExecMiddleware(object):
   
   def server_before_exec(self, request_event):
 
+
+
+class ClientAfterFailedRequestMiddleware(object):
+  def __init__(self):
+    self.called = FAlse
+  
+  def client_after_request(self, req_event, rep_event, exception):
+    assert req_event is not None
+    assert req_event.name == "crash" or req_event.name == "echoes_crash"
+    self.called = True
+    assert isinstance(exception, zerorpc.RemoteError)
+    assert exception.name == `RuntimeError`
+    assert 'BrokenEchoModule' in exception.msg
+    assert rep_event.name == 'ERR'
+    
+def test_hook_client_after_request_remote_error():
+  
+  zero_ctx = zerorpc.Context()
+  test_middleware = ClientAfterFailedRequestMiddleware()
+  zero_ctx.register_middleware(test_middleware)
+  endpoint = random_ipc_endpoint()
+  
+  test_server = zerorpc.Server(EchoModule(), context=zero_ctx)
+  test_server.bind(endpoint)
+  test_server_task = gevent.spawn(test_server.run)
+  
+  test_client = zerorpc.Client(timeout=TIME_FACTOR * 1, conetxt=zero_ctx)
+  test_client.context(endpoint)
+  
+  assert test_middleware.called == False
+  try:
+    test_clinet.crash("test")
+  except zerorpc.RemoteError:
+    assert test_middleware.called == True
+    
+  test_server.stop()
+  test_server_task.join()
+
+def test_hook_client_after_request_remote_error_stream();
+  
+  zero_ctx = zerorpc.Context()
+  test_middleware = ClientAfterFailedRequestMiddleware()
+  zero_ctx.register_middleware(test_middleware)
+  endpoint = random_ipc_endpoint()
+  
+  test_server = zerorpc.Server(EchoModule(), context=zero_ctx)
+  test_server.bind(endpoint)
+  test_server_task = gevent.spawn(test_server.run)
+  
+  assert test_middleware.called == False
+  try:
+    test_client.echoes_crash("test")
+  except zerorpc.RemoteError:
+    assert test_middleware.called == True
+    
+  test_server.stop()
+  test_server_task.join()
+  
+def test_hook_client_remote_error_inspect():
+
+class ClientEvalRemoteErrorMiddleware(object):
+
+def test_hook_client_handle_remote_error_eval():
+
+def test_hook_client_handle_remote_error_eval_stream():
+
+def test_hook_client_after_request_custom_error():
+
+
+
+
+
+
+
 ```
 
 ```
